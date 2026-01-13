@@ -43,7 +43,11 @@ dependencies:
   cloud_firestore: ^4.14.0
   cloud_functions: ^4.6.0
   firebase_storage: ^11.6.0
+  firebase_messaging: ^14.7.5
   
+  # AI
+  google_generative_ai: ^0.2.0
+
   # UI & Maps
   flutter_map: ^6.1.0
   google_fonts: ^6.1.0
@@ -56,6 +60,8 @@ dev_dependencies:
   build_runner: ^2.4.8
   freezed: ^2.4.6
   json_serializable: ^6.7.1
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.3.7
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

@@ -1,29 +1,29 @@
 {
-    "project_info": {
-        "project_number": "150223772465",
-        "project_id": "rido-beta-pilot-2026",
-        "storage_bucket": "rido-beta-pilot-2026.firebasestorage.app"
-    },
-    "client": [
-        {
-            "client_info": {
-                "mobilesdk_app_id": "1:150223772465:android:044fbd3b21e4ac802b6e10",
-                "android_client_info": {
-                    "package_name": "com.rido.app"
-                }
-            },
-            "oauth_client": [],
-            "api_key": [
-                {
-                    "current_key": "AIzaSyDRB-M2zuETbUlCbgQvdTcnPmN-_AojEwU"
-                }
-            ],
-            "services": {
-                "appinvite_service": {
-                    "other_platform_oauth_client": []
-                }
-            }
+  "project_info": {
+    "project_number": "150223772465",
+    "project_id": "rido-beta-pilot-2026",
+    "storage_bucket": "rido-beta-pilot-2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:150223772465:android:044fbd3b21e4ac802b6e10",
+        "android_client_info": {
+          "package_name": "com.rido.app"
         }
-    ],
-    "configuration_version": "1"
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDRB-M2zuETbUlCbgQvdTcnPmN-_AojEwU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
 }

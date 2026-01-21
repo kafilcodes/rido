@@ -1,130 +1,147 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' as material;
 import 'package:introduction_screen/introduction_screen.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lottie/lottie.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
+import 'package:permission_handler/permission_handler.dart';
 
-class OnboardingScreen extends StatefulWidget {
+class OnboardingScreen extends material.StatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  material.State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
-  final _introKey = GlobalKey<IntroductionScreenState>();
+class _OnboardingScreenState extends material.State<OnboardingScreen> {
+  final _introKey = material.GlobalKey<IntroductionScreenState>();
 
-  Future<void> _onIntroEnd(BuildContext context) async {
-    // Request permissions
-    await [
-      Permission.location,
-      Permission.notification,
-      Permission.sms,
-    ].request();
-    
-    // Save to prefs
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isFirstLaunch', false);
-
-    // Navigate to Auth
-    if (mounted) {
-      context.go('/auth');
-    }
+  void _onIntroEnd(material.BuildContext context) async {
+    await [Permission.location].request();
+    if (context.mounted) context.go('/auth');
   }
 
-  Widget _buildImage(String assetName) {
-    return Center(
-      child: Lottie.asset(
-        'assets/lottie/$assetName', 
-        width: 90.w, // Increased size
-        height: 50.h,
-        fit: BoxFit.contain
+  material.Widget _buildImage(String assetName) {
+    return Lottie.asset(
+      'assets/lottie/$assetName',
+      width: 80.w,
+      height: 40.h, 
+      fit: material.BoxFit.contain,
+      errorBuilder: (context, error, stackTrace) {
+        return const material.Icon(LucideIcons.imageOff, size: 50, color: material.Colors.red);
+      },
+    );
+  }
+
+  PageViewModel _buildPage({
+    required String title,
+    required String body,
+    required String lottie,
+    int imageFlex = 3, // Default flex
+    double topPadding = 40.0, // Default top padding
+  }) {
+    return PageViewModel(
+      // Custom Layout: Image Top, Text Bottom
+      titleWidget: Padding(
+        padding: const material.EdgeInsets.only(top: 20.0), 
+        child: Text(title).h3().foreground().center(),
       ),
+      // Body: Centered and Justified
+      bodyWidget: Padding(
+        padding: const material.EdgeInsets.symmetric(horizontal: 8.0),
+        child: Text(
+          body,
+          textAlign: material.TextAlign.center,
+          style: Theme.of(context).typography.small.copyWith(
+            color: Theme.of(context).colorScheme.mutedForeground,
+            fontSize: 14,
+          ), 
+        ),
+      ),
+      image: Padding(
+        padding: material.EdgeInsets.only(top: topPadding), 
+        child: _buildImage(lottie),
+      ),
+      decoration: PageDecoration( // Removed const to allow custom flex
+        pageColor: material.Colors.transparent,
+        bodyPadding: const material.EdgeInsets.symmetric(horizontal: 24),
+        imagePadding: material.EdgeInsets.zero,
+        imageFlex: imageFlex, 
+        bodyFlex: 2,
+      ),
+    );
+  }
+  
+  // Helper for Gradient Text/Icon
+  material.Widget _gradientWidget(material.Widget child) {
+    return ShaderMask(
+      shaderCallback: (bounds) => const material.LinearGradient(
+        colors: [material.Color(0xFF6366F1), material.Color(0xFFA855F7)],
+        begin: material.Alignment.topLeft,
+        end: material.Alignment.bottomRight,
+      ).createShader(bounds),
+      child: child,
     );
   }
 
   @override
-  Widget build(BuildContext context) {
-    return IntroductionScreen(
-      key: _introKey,
-      globalBackgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      allowImplicitScrolling: true,
-      autoScrollDuration: null,
-      infiniteAutoScroll: false,
-      bodyPadding: EdgeInsets.only(top: 10.h), // Center the content vertically
-      pages: [
-        PageViewModel(
-          title: "Request a Ride",
-          body: "Get where you need to go, fast and safe.",
-          image: _buildImage('request_a_ride.json'),
-          decoration: PageDecoration(
-            titleTextStyle: TextStyle(fontSize: 24.sp, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.titleLarge?.color),
-            bodyTextStyle: TextStyle(fontSize: 14.sp, color: Theme.of(context).textTheme.bodyMedium?.color),
-            imagePadding: EdgeInsets.zero,
-          ),
-        ),
-        PageViewModel(
-          title: "Send a Parcel",
-          body: "Deliver packages locally with ease.",
-          image: _buildImage('send_a_parcel.json'),
-          decoration: PageDecoration(
-            titleTextStyle: TextStyle(fontSize: 24.sp, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.titleLarge?.color),
-            bodyTextStyle: TextStyle(fontSize: 14.sp, color: Theme.of(context).textTheme.bodyMedium?.color),
-             imagePadding: EdgeInsets.zero,
-          ),
-        ),
-        PageViewModel(
-          title: "Get Started",
-          body: "We need a few permissions to serve you better.",
-          image: _buildImage('get_started.json'),
-          decoration: PageDecoration(
-            titleTextStyle: TextStyle(fontSize: 24.sp, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.titleLarge?.color),
-            bodyTextStyle: TextStyle(fontSize: 14.sp, color: Theme.of(context).textTheme.bodyMedium?.color),
-             imagePadding: EdgeInsets.zero,
-          ),
-        ),
-      ],
-      onDone: () => _onIntroEnd(context),
-      onSkip: () => _onIntroEnd(context),
-      showSkipButton: true,
-      skipOrBackFlex: 0,
-      nextFlex: 0,
-      showBackButton: false,
-      back: Icon(Icons.arrow_back, color: Theme.of(context).iconTheme.color),
-      skip: Text('Skip', style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).textTheme.bodyMedium?.color)),
-      next: Icon(Icons.arrow_forward, color: Theme.of(context).primaryColor), // Use primary color for next
-      done: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
-          ),
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            Text(
-              'Start', 
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)
+  material.Widget build(material.BuildContext context) {
+    // USE SHADCN THEME for correct brightness/colors
+    final theme = Theme.of(context);
+    
+    return material.Scaffold(
+      backgroundColor: theme.colorScheme.background,
+      body: material.SafeArea(
+        child: IntroductionScreen(
+          key: _introKey,
+          globalBackgroundColor: material.Colors.transparent,
+          allowImplicitScrolling: true,
+          pages: [
+            _buildPage(
+              title: "Request a Ride",
+              body: "Request a ride get picked up by a nearby community driver",
+              lottie: "request_a_ride.json",
             ),
-            SizedBox(width: 4),
-            Icon(Icons.arrow_forward, color: Colors.white, size: 18),
+            _buildPage(
+              title: "Send a Parcel",
+              body: "Confirm your driver to send a parcel safely to your destination",
+              lottie: "send_a_parcel.json", 
+              imageFlex: 4, // Bigger animation for 2nd slide
+              topPadding: 20.0, // Less padding to accommodate size
+            ),
+            _buildPage(
+              title: "Get Started",
+              body: "Know your driver in advance and view current location in real time",
+              lottie: "get_started.json", 
+              imageFlex: 4, // Bigger animation for 3rd slide
+              topPadding: 20.0,
+            ),
           ],
-        ),
-      ),
-      curve: Curves.fastLinearToSlowEaseIn,
-      controlsMargin: const EdgeInsets.all(16),
-      controlsPadding: const EdgeInsets.fromLTRB(8.0, 4.0, 8.0, 4.0),
-      dotsDecorator: DotsDecorator(
-        size: const Size(10.0, 10.0),
-        color: const Color(0xFFBDBDBD),
-        activeSize: const Size(22.0, 10.0),
-        activeColor: Theme.of(context).primaryColor,
-        activeShape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(25.0)),
+          onDone: () => _onIntroEnd(context),
+          onSkip: () => _onIntroEnd(context),
+          showSkipButton: true,
+          // Skip: Greyish, 60% opacity
+          skip: material.Opacity(
+            opacity: 0.6,
+            child: const Text("Skip", style: material.TextStyle(fontWeight: material.FontWeight.w600)),
+          ),
+          // Next: Smaller Gradient Arrow (Size reduced from 28 to 24)
+          next: _gradientWidget(const material.Icon(LucideIcons.arrowRight, size: 24, color: material.Colors.white)),
+          // Done: Gradient Text
+          done: _gradientWidget(const Text("Done", style: material.TextStyle(fontWeight: material.FontWeight.bold, fontSize: 16, color: material.Colors.white))),
+          curve: material.Curves.fastLinearToSlowEaseIn,
+          controlsMargin: const material.EdgeInsets.all(16),
+          controlsPadding: const material.EdgeInsets.all(12.0),
+          dotsDecorator: DotsDecorator(
+            size: const material.Size(10.0, 10.0),
+            color: material.Colors.grey.withOpacity(0.5),
+            activeSize: const material.Size(22.0, 10.0),
+            // We can't easily gradient the dot API, so we use the primary color (Indigo)
+            activeColor: const material.Color(0xFF6366F1), 
+            activeShape: material.RoundedRectangleBorder(
+              borderRadius: material.BorderRadius.circular(25.0),
+            ),
+          ),
         ),
       ),
     );

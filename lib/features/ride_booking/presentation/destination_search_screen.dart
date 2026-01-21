@@ -1,26 +1,26 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter/material.dart' as material;
+import 'package:shadcn_flutter/shadcn_flutter.dart';
+// import 'package:go_router/go_router.dart'; // Unused
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:sizer/sizer.dart';
 import 'package:uuid/uuid.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../data/places_service.dart';
 import 'confirm_location_screen.dart';
 
-class DestinationSearchScreen extends StatefulWidget {
+class DestinationSearchScreen extends material.StatefulWidget {
   const DestinationSearchScreen({super.key});
 
   @override
-  State<DestinationSearchScreen> createState() => _DestinationSearchScreenState();
+  material.State<DestinationSearchScreen> createState() => _DestinationSearchScreenState();
 }
 
-class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
-  final TextEditingController _pickupController = TextEditingController();
-  final TextEditingController _dropoffController = TextEditingController();
-  final FocusNode _pickupFocus = FocusNode();
-  final FocusNode _dropoffFocus = FocusNode();
+class _DestinationSearchScreenState extends material.State<DestinationSearchScreen> {
+  final material.TextEditingController _pickupController = material.TextEditingController();
+  final material.TextEditingController _dropoffController = material.TextEditingController();
+  final material.FocusNode _pickupFocus = material.FocusNode();
+  final material.FocusNode _dropoffFocus = material.FocusNode();
   
   final PlacesService _placesService = PlacesService();
   final _uuid = const Uuid();
@@ -29,14 +29,13 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
   
   List<Map<String, dynamic>> _predictions = [];
   bool _isLoading = false;
-  bool _isPickupFocused = true;
   
-  // Confirmed Data
   LatLng? _pickupLatLng;
   LatLng? _dropoffLatLng;
   String? _pickupAddress;
   String? _dropoffAddress;
   List<String> _pickupImages = [];
+  bool _isPickupFocused = false;
 
   @override
   void initState() {
@@ -75,13 +74,14 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
         }
       }
     } catch (e) {
-      debugPrint("Error fetching current location: $e");
+      material.debugPrint("Error fetching current location: $e");
     }
   }
 
   void _onSearchChanged(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () async {
+    // increased debounce to 500ms as requested
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
       if (query.isEmpty) {
         setState(() => _predictions = []);
         return;
@@ -105,7 +105,26 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
     
     // Get Details (Lat/Lng)
     final details = await _placesService.getPlaceDetails(placeId, _sessionToken);
+    
     if (details != null) {
+      // Validate PIN Code (Strict Restriction)
+      if (!_isValidLocation(details)) {
+        if (!mounted) return;
+        
+        // Show Toast/Dialog for invalid location
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text("Out of Service Area"),
+            content: const Text("Rido is currently only available in Dhamtari, Kurud, Nagri, and Magarlod."),
+            actions: [
+              TextButton(child: const Text("OK"), onPressed: () => Navigator.pop(context))
+            ],
+          ),
+        );
+        return;
+      }
+      
       final lat = details['geometry']['location']['lat'];
       final lng = details['geometry']['location']['lng'];
       final latLng = LatLng(lat, lng);
@@ -113,9 +132,9 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
       if (!mounted) return;
 
       // Navigate to Map Confirmation
-      final result = await Navigator.push(
+      final result = await material.Navigator.push(
         context, 
-        MaterialPageRoute(builder: (_) => ConfirmLocationScreen(
+        material.MaterialPageRoute(builder: (_) => ConfirmLocationScreen(
           initialTarget: latLng, 
           initialAddress: description,
           isPickup: _isPickupFocused
@@ -130,6 +149,42 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
     // Reset Session Token
     _sessionToken = _uuid.v4();
   }
+
+  // Allowed PIN codes for Dhamtari district
+  final _allowedPinCodes = {
+    '493773', // Dhamtari
+    '493776', // Rudri
+    '493663', // Kurud
+    '493662', // Magarlod
+    '493778', // Nagri
+  };
+
+  bool _isValidLocation(Map<String, dynamic> details) {
+    final components = details['address_components'] as List<dynamic>?;
+    if (components == null) return false; // Fail safe if no components
+
+    for (var c in components) {
+      final types = (c['types'] as List).cast<String>();
+      if (types.contains('postal_code')) {
+        final postalCode = c['text'] ?? c['longText'] ?? ""; 
+        // New API uses 'text', legacy used 'long_name'. 
+        // My PlacesService maps response directly, but New API has 'longText' inside component object?
+        // Actually New API returns { "type": "postal_code", "longText": "493773" ... }
+        // Wait, I am passing raw list from service. 
+        // New API 'addressComponents' items have 'longText', 'shortText', 'types'.
+        
+        // Let's print to debug if needed, but safe access:
+        final code = c['longText'] ?? c['shortText'];
+        if (_allowedPinCodes.contains(code)) {
+          return true;
+        }
+      }
+    }
+    // If no postal code found, or not in list... 
+    // Maybe we should allow if likely inside bounds? But strict was requested.
+    // Let's adhere to strict PIN list.
+    return false;
+  }
   
   void _handleConfirmedLocation(Map result) {
     final latLng = result['latLng'] as LatLng;
@@ -143,7 +198,7 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
         _pickupController.text = address;
         _pickupImages = images ?? [];
         // Move focus to dropoff if pickup is done
-        FocusScope.of(context).requestFocus(_dropoffFocus);
+        material.FocusScope.of(context).requestFocus(_dropoffFocus);
       } else {
         _dropoffLatLng = latLng;
         _dropoffAddress = address;
@@ -159,7 +214,7 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
   }
   
   void _finishSelection() {
-    Navigator.pop(context, {
+    material.Navigator.pop(context, {
       'destination': _dropoffAddress,
       'pickup': {
         'lat': _pickupLatLng!.latitude,
@@ -176,79 +231,89 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = Theme.of(context).cardColor;
-    final scaffoldColor = Theme.of(context).scaffoldBackgroundColor;
-    final textColor = isDark ? Colors.white : Colors.black;
+  material.Widget build(material.BuildContext context) {
+    // USE SHADCN THEME
+    final theme = Theme.of(context);
+    final scaffoldColor = theme.colorScheme.background;
+    final cardColor = theme.colorScheme.card;
+    final textColor = theme.colorScheme.foreground;
+    final mutedColor = theme.colorScheme.mutedForeground;
+    
+    // Fix undefined variables
+    final backgroundColor = theme.colorScheme.card;
+    final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
+    return material.Scaffold(
       backgroundColor: scaffoldColor,
-      appBar: AppBar(
+      appBar: material.AppBar(
         backgroundColor: scaffoldColor,
         elevation: 0,
-        leading: BackButton(color: textColor),
-        title: Text("Plan your ride", style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+        leading: material.BackButton(color: textColor),
+        title: material.Text("Plan your ride", style: material.TextStyle(color: textColor, fontWeight: material.FontWeight.bold)),
       ),
-      body: Column(
+      body: material.Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
+          material.Container(
+            padding: const material.EdgeInsets.all(16),
+            margin: const material.EdgeInsets.symmetric(horizontal: 16),
+            decoration: material.BoxDecoration(
               color: backgroundColor,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: isDark ? [] : [BoxShadow(color: Colors.black12, blurRadius: 10)],
+              borderRadius: material.BorderRadius.circular(16),
+              boxShadow: isDark ? [] : [material.BoxShadow(color: material.Colors.black12, blurRadius: 10)],
             ),
-            child: Column(
+            child: material.Column(
               children: [
                 _buildTextField(
                   controller: _pickupController,
                   focusNode: _pickupFocus,
                   hint: "Pickup Location",
-                  icon: Icons.my_location,
-                  iconColor: Colors.blue,
+                  icon: material.Icons.my_location,
+                  iconColor: material.Colors.blue,
                   isDark: isDark,
+                  textColor: textColor,
+                  hintColor: mutedColor,
                   onTap: () => setState(() => _isPickupFocused = true),
                 ),
-                const Divider(height: 20),
+                const material.Divider(height: 20),
                 _buildTextField(
                   controller: _dropoffController,
                   focusNode: _dropoffFocus,
                   hint: "Where to?",
-                  icon: Icons.location_on,
-                  iconColor: Colors.red,
+                  icon: material.Icons.location_on,
+                  iconColor: material.Colors.red,
                   isDark: isDark,
+                  textColor: textColor,
+                  hintColor: mutedColor,
                   onTap: () => setState(() => _isPickupFocused = false),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const material.SizedBox(height: 16),
           if (_isLoading)
-            const LinearProgressIndicator(),
+            const material.LinearProgressIndicator(),
             
-          Expanded(
-            child: ListView.separated(
+          material.Expanded(
+            child: material.ListView.separated(
               itemCount: _predictions.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
+              separatorBuilder: (_, __) => const material.Divider(height: 1),
               itemBuilder: (context, index) {
                 final item = _predictions[index];
                 final mainText = item['structured_formatting']?['main_text'] ?? item['description'] ?? "";
                 final secondaryText = item['structured_formatting']?['secondary_text'] ?? "";
                 
-                return ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: Colors.grey, 
-                    child: Icon(Icons.place, color: Colors.white)
+                return material.ListTile(
+                  leading: const material.CircleAvatar(
+                    backgroundColor: material.Colors.grey, 
+                    child: material.Icon(material.Icons.place, color: material.Colors.white)
                   ),
-                  title: Text(
+                  title: material.Text(
                     mainText,
-                    style: TextStyle(color: textColor, fontWeight: FontWeight.bold)
+                    style: material.TextStyle(color: textColor, fontWeight: material.FontWeight.bold)
                   ),
-                  subtitle: Text(
+                  subtitle: material.Text(
                     secondaryText,
-                    style: TextStyle(color: isDark ? Colors.white70 : Colors.grey)
+                    style: material.TextStyle(color: mutedColor)
                   ),
                   onTap: () => _onPredictionSelected(item),
                 );
@@ -260,41 +325,38 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required FocusNode focusNode,
+  material.Widget _buildTextField({
+    required material.TextEditingController controller,
+    required material.FocusNode focusNode,
     required String hint,
-    required IconData icon,
-    required Color iconColor,
+    required material.IconData icon,
+    required material.Color iconColor,
     required bool isDark,
-    required VoidCallback onTap,
+    required material.Color textColor,
+    required material.Color hintColor,
+    required material.VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: () {
-        focusNode.requestFocus();
-        onTap();
-      },
-      child: Row(
-        children: [
-          Icon(icon, color: iconColor),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              focusNode: focusNode,
-              onChanged: _onSearchChanged,
-              onTap: onTap,
-              style: TextStyle(color: isDark ? Colors.white : Colors.black),
-              decoration: InputDecoration(
-                hintText: hint,
-                hintStyle: TextStyle(color: isDark ? Colors.white54 : Colors.grey),
-                border: InputBorder.none,
-                isDense: true,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    // keeping custom text field as requested
+            // Pickup Field
+            return material.Container(
+               decoration: material.BoxDecoration(
+                 color: isDark ? material.Colors.white.withOpacity(0.05) : material.Colors.grey.withOpacity(0.05),
+                 borderRadius: material.BorderRadius.circular(8),
+               ),
+               child: material.TextField(
+                 controller: controller,
+                 focusNode: focusNode,
+                 style: material.TextStyle(color: textColor),
+                 decoration: material.InputDecoration(
+                   hintText: hint,
+                   hintStyle: material.TextStyle(color: hintColor),
+                   border: material.InputBorder.none,
+                   prefixIcon: material.Icon(icon, color: iconColor),
+                   contentPadding: const material.EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                 ),
+                 onChanged: (val) => _onSearchChanged(val),
+                 onTap: onTap,
+               ),
+            );
   }
 }

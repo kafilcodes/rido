@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' as material;
+import 'package:flutter/widgets.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:sizer/sizer.dart';
 
 class RideEstimationSheet extends StatefulWidget {
@@ -15,24 +17,19 @@ class _RideEstimationSheetState extends State<RideEstimationSheet> {
   int _selectedVehicle = 0;
   
   final List<Map<String, dynamic>> _options = [
-    {'name': 'Bike', 'price': '₹45', 'time': '3 mins', 'icon': Icons.two_wheeler, 'desc': 'Fastest & Affordable'},
-    {'name': 'Auto', 'price': '₹65', 'time': '5 mins', 'icon': Icons.local_taxi, 'desc': 'Doorstep Pickup'},
-    {'name': 'Mini', 'price': '₹90', 'time': '8 mins', 'icon': Icons.directions_car, 'desc': 'Comfy Hatchbacks'},
-    {'name': 'Sedan', 'price': '₹120', 'time': '10 mins', 'icon': Icons.directions_car_filled, 'desc': 'Top Rated Drivers'},
+    {'name': 'Bike', 'price': '₹45', 'time': '3 mins', 'icon': LucideIcons.bike, 'desc': 'Fastest & Affordable'},
+    {'name': 'Auto', 'price': '₹65', 'time': '5 mins', 'icon': LucideIcons.carTaxiFront, 'desc': 'Doorstep Pickup'},
+    {'name': 'Mini', 'price': '₹90', 'time': '8 mins', 'icon': LucideIcons.car, 'desc': 'Comfy Hatchbacks'},
+    {'name': 'Sedan', 'price': '₹120', 'time': '10 mins', 'icon': LucideIcons.carFront, 'desc': 'Top Rated Drivers'},
   ];
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = Theme.of(context).cardColor;
-    final textColor = isDark ? Colors.white : Colors.black;
-    final secondaryTextColor = isDark ? Colors.white70 : Colors.grey[600];
-    final selectedColor = isDark ? const Color(0xFF2C2C2C) : Colors.grey[100];
-    final borderColor = isDark ? Colors.grey[700]! : Colors.grey[200]!;
-
+    final theme = Theme.of(context);
+    
     return Container(
       decoration: BoxDecoration(
-        color: backgroundColor,
+        color: theme.colorScheme.card,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -44,15 +41,14 @@ class _RideEstimationSheetState extends State<RideEstimationSheet> {
               margin: const EdgeInsets.only(top: 10),
               width: 50, 
               height: 5, 
-              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))
+              decoration: BoxDecoration(color: theme.colorScheme.muted, borderRadius: BorderRadius.circular(10))
             ),
           ),
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Text(
               "Available Rides to ${widget.destination}", 
-              style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold, color: textColor)
-            ),
+            ).h4().foreground(),
           ),
           SizedBox(
             height: 25.h,
@@ -63,41 +59,49 @@ class _RideEstimationSheetState extends State<RideEstimationSheet> {
               itemBuilder: (context, index) {
                 final opt = _options[index];
                 final isSelected = _selectedVehicle == index;
-                return InkWell(
+                
+                return GestureDetector(
                   onTap: () => setState(() => _selectedVehicle = index),
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: isSelected ? selectedColor : backgroundColor,
+                      color: isSelected 
+                          ? theme.colorScheme.primary.withOpacity(0.1) 
+                          : theme.colorScheme.background,
                       border: Border.all(
-                        color: isSelected ? (isDark ? Colors.white : Colors.black) : borderColor, 
+                        color: isSelected 
+                            ? theme.colorScheme.primary 
+                            : theme.colorScheme.border,
                         width: isSelected ? 2 : 1
                       ),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       children: [
-                        Image.asset(
-                          'assets/images/${opt['name'].toString().toLowerCase()}.png', 
-                          width: 60, 
-                          height: 40, 
-                          errorBuilder: (c, e, s) => Icon(opt['icon'], size: 40, color: textColor)
+                        // Try to load asset, fallback to icon
+                        SizedBox(
+                          width: 60,
+                          height: 40,
+                          child: Icon(opt['icon'], size: 32, color: theme.colorScheme.foreground),
                         ),
+                        // Note: If you have actual assets, you can keep the Image.asset logic with errorBuilder
+                        // For now using Icons for consistency with shadcn style clean look
+                        
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(opt['name'], style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold, color: textColor)),
-                              Text(opt['desc'], style: TextStyle(fontSize: 10.sp, color: secondaryTextColor)),
+                              Text(opt['name']).medium().foreground(),
+                              Text(opt['desc']).small().muted(),
                             ],
                           ),
                         ),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(opt['price'], style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold, color: textColor)),
-                            Text(opt['time'], style: TextStyle(fontSize: 10.sp, color: secondaryTextColor)),
+                            Text(opt['price']).large().foreground(),
+                            Text(opt['time']).small().muted(),
                           ],
                         )
                       ],
@@ -109,33 +113,20 @@ class _RideEstimationSheetState extends State<RideEstimationSheet> {
           ),
           Padding(
             padding: EdgeInsets.all(5.w),
-            child: SafeArea(
+            child: material.SafeArea(
               child: SizedBox(
                 width: double.infinity,
-                height: 50,
-                child: Container(
-                   decoration: BoxDecoration(
-                     gradient: const LinearGradient(colors: [Color(0xFF6A11CB), Color(0xFF2575FC)]),
-                     borderRadius: BorderRadius.circular(20),
-                   ),
-                   child: ElevatedButton(
+                child: Button.primary(
                     onPressed: widget.onConfirm,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      foregroundColor: Colors.white,
-                      shadowColor: Colors.transparent,
-                      shape: ContinuousRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text("Book ${_options[_selectedVehicle]['name']}", style: TextStyle(fontSize: 14.sp)),
+                        Text("Book ${_options[_selectedVehicle]['name']}"),
                         const SizedBox(width: 10),
-                        const Icon(Icons.arrow_forward, size: 20)
+                        const Icon(LucideIcons.arrowRight, size: 20)
                       ],
                     ),
                   ),
-                ),
               ),
             ),
           )

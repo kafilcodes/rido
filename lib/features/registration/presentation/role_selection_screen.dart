@@ -1,40 +1,41 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' as material;
+import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sizer/sizer.dart';
 
-class RoleSelectionScreen extends StatelessWidget {
+class RoleSelectionScreen extends material.StatelessWidget {
   const RoleSelectionScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Choose your role")),
-      body: Center(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+  material.Widget build(material.BuildContext context) {
+    return material.Scaffold(
+      appBar: material.AppBar(title: const Text("Choose your role")),
+      body: material.Center(
+        child: material.Row(
+          mainAxisAlignment: material.MainAxisAlignment.spaceEvenly,
           children: [
-            _buildCard(context, "Rider", Icons.person, "rider"),
-            _buildCard(context, "Driver", Icons.drive_eta, "driver"),
+            _buildCard(context, "Rider", LucideIcons.user, "rider"),
+            _buildCard(context, "Driver", LucideIcons.car, "driver"),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildCard(BuildContext context, String title, IconData icon, String role) {
-    return InkWell(
+  material.Widget _buildCard(material.BuildContext context, String title, IconData icon, String role) {
+    return material.GestureDetector(
       onTap: () => context.push('/profile-form', extra: role),
-      child: Card(
-        child: Container(
-          width: 40.w,
-          height: 20.h,
-          alignment: Alignment.center,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+      child: SizedBox(
+        width: 40.w,
+        height: 20.h,
+        child: Card( // Shadcn Card
+          padding: const material.EdgeInsets.all(16),
+          child: material.Column(
+            mainAxisAlignment: material.MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 40.sp),
+              material.Icon(icon, size: 40.sp),
               SizedBox(height: 1.h),
-              Text(title, style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
+              Text(title).h3(), 
             ],
           ),
         ),

@@ -35,11 +35,11 @@ dependencies:
   # UI Ecosystem (The Quad-Stack)
   shadcn_ui: 
   getwidget: 
-  shadcn_flutter: any 
-  forui: any
+  shadcn_flutter: ^0.0.47 
   
   # Animations & Interactions
-  lottie:
+  lottie: ^3.1.2
+  animation_list: ^3.0.0
   flutter_svg: ^2.0.10
   animations: 
   page_transition: 
@@ -48,6 +48,7 @@ dependencies:
   haptic_feedback: 
 
   # Maps & Navigation
+  google_places_autocomplete: ^2.0.5
   # Maps & Navigation
   google_maps_flutter: ^2.5.0 
   geolocator: ^13.0.0 
@@ -87,7 +88,7 @@ dependencies:
   google_generative_ai: ^0.2.0
 
   # Assets & Fonts
-  google_fonts: ^6.1.0
+  google_fonts: ^6.3.3
   cupertino_icons: ^1.0.6
   
   # Generation
@@ -99,6 +100,9 @@ dependencies:
   http: ^1.6.0
   uuid: ^4.5.2
   geocoding: ^4.0.0
+  forui_assets: ^0.17.1
+  shimmer: ^3.0.0
+  lucide_icons: ^0.257.0
 
 dev_dependencies:
   flutter_test:
@@ -120,3 +124,15 @@ flutter:
     - assets/lottie/
     - assets/images/
     - assets/
+    - assets/fonts/
+
+  fonts:
+    - family: UberMove
+      fonts:
+        - asset: assets/fonts/UberMoveTextRegular.otf
+        - asset: assets/fonts/UberMoveTextMedium.otf
+          weight: 500
+        - asset: assets/fonts/UberMoveTextBold.otf
+          weight: 700
+        - asset: assets/fonts/UberMoveTextLight.otf
+          weight: 300

@@ -1,20 +1,22 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' as material;
+import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:rido/core/theme/ui_theme.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sizer/sizer.dart';
 
-class AccountScreen extends StatefulWidget {
-  final VoidCallback? onBack;
-  const AccountScreen({super.key, this.onBack});
+class AccountScreen extends material.StatefulWidget {
+  const AccountScreen({super.key});
 
   @override
-  State<AccountScreen> createState() => _AccountScreenState();
+  material.State<AccountScreen> createState() => _AccountScreenState();
 }
 
-class _AccountScreenState extends State<AccountScreen> {
+class _AccountScreenState extends material.State<AccountScreen> {
   User? _user;
   Map<String, dynamic>? _userData;
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -30,163 +32,210 @@ class _AccountScreenState extends State<AccountScreen> {
       if (doc.exists && mounted) {
         setState(() {
           _userData = doc.data();
+          _isLoading = false;
         });
+      } else {
+        if (mounted) setState(() => _isLoading = false);
       }
     } catch (e) {
-      debugPrint("Error fetching profile: $e");
+      material.debugPrint("Error fetching profile: $e");
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white : Colors.black;
+    // USE SHADCN THEME
+    final theme = Theme.of(context);
     
-    final name = _userData?['name'] as String? ?? _user?.displayName ?? "User Name";
+    final name = _userData?['name'] as String? ?? _user?.displayName ?? "User";
     final phone = _userData?['phone'] as String? ?? _user?.phoneNumber ?? "";
     final photoUrl = _userData?['profile_pic'] as String?;
-    final city = _userData?['city'] as String?;
+    
+    // Initials logic
+    String initials = name.isNotEmpty ? name[0].toUpperCase() : "U";
+    if (name.contains(" ")) {
+       final parts = name.split(" ");
+       if (parts.length > 1 && parts[1].isNotEmpty) initials = "${parts[0][0]}${parts[1][0]}".toUpperCase();
+    }
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text("Account"),
-        automaticallyImplyLeading: false, 
-        leading: widget.onBack != null ? IconButton(
-          icon: Icon(Icons.arrow_back, color: Theme.of(context).iconTheme.color),
-          onPressed: widget.onBack,
-        ) : null,
-        centerTitle: false,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+    return material.Container(
+      color: theme.colorScheme.background,
+      child: material.SafeArea(
         child: Column(
           children: [
-            // Profile Header
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 35,
-                  backgroundColor: Colors.grey[200],
-                  backgroundImage: photoUrl != null && photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
-                  child: (photoUrl == null || photoUrl.isEmpty) 
-                      ? const Icon(Icons.person, size: 35, color: Colors.grey) 
-                      : null,
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold, color: textColor),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        phone,
-                        style: TextStyle(fontSize: 14.sp, color: Colors.grey),
-                      ),
-                      if (city != null)
-                      Text(
-                        city,
-                        style: TextStyle(fontSize: 12.sp, color: Colors.grey[600]),
-                      ),
-                    ],
+            // Custom Header with Menu Button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  material.IconButton(
+                    icon: Icon(LucideIcons.menu, color: theme.colorScheme.foreground),
+                    onPressed: () => material.Scaffold.of(context).openDrawer(),
                   ),
+                  const SizedBox(width: 8),
+                  Text("Account", style: theme.typography.h4.copyWith(color: theme.colorScheme.foreground)),
+                ],
+              ),
+            ),
+            
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                   crossAxisAlignment: CrossAxisAlignment.start,
+                   children: [
+                     // Profile Card
+                     Card(
+                       child: Padding(
+                         padding: const EdgeInsets.all(16.0),
+                         child: Row(
+                          children: [
+                            material.CircleAvatar(
+                              radius: 32,
+                              backgroundColor: material.Colors.transparent,
+                              child: Container(
+                                 width: 64,
+                                 height: 64,
+                                 decoration: material.BoxDecoration(
+                                   shape: material.BoxShape.circle,
+                                   color: photoUrl == null ? theme.colorScheme.muted : null,
+                                   image: photoUrl != null ? material.DecorationImage(image: material.NetworkImage(photoUrl), fit: material.BoxFit.cover) : null,
+                                   gradient: photoUrl == null ? UITheme.primaryGradient : null,
+                                 ),
+                                 alignment: material.Alignment.center,
+                                 child: photoUrl == null 
+                                   ? Text(initials, style: const material.TextStyle(color: material.Colors.white, fontSize: 20, fontWeight: material.FontWeight.bold))
+                                   : null,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(name).h4().foreground(), 
+                                  const SizedBox(height: 2),
+                                  Text(phone).muted().small(),
+                                ],
+                              ),
+                            ),
+                            material.IconButton(
+                              onPressed: () {}, // Edit Profile
+                              icon: Icon(LucideIcons.pencil, size: 16, color: theme.colorScheme.primary),
+                            )
+                          ],
+                         ),
+                       ),
+                     ),
+                     
+                     const SizedBox(height: 16),
+                     
+                     // Favorites Section
+                     Text("Favorites").small().muted(),
+                     const SizedBox(height: 8),
+                     Card(
+                       padding: EdgeInsets.zero,
+                       child: Column(
+                         children: [
+                           _buildListItem(context, icon: LucideIcons.mapPin, title: "Saved Places", onTap: () {}),
+                           const Divider(),
+                           _buildListItem(context, icon: LucideIcons.shieldCheck, title: "Trusted Contacts", onTap: () {}),
+                         ],
+                       ),
+                     ),
+                     
+                     const SizedBox(height: 16),
+                     
+                     // Settings Section
+                     Text("Settings").small().muted(),
+                     const SizedBox(height: 8),
+                     Card(
+                       padding: EdgeInsets.zero,
+                       child: Column(
+                         children: [
+                           _buildListItem(context, icon: LucideIcons.creditCard, title: "Payment Methods", onTap: () {}, enabled: false),
+                           const Divider(),
+                           _buildListItem(context, icon: LucideIcons.languages, title: "Language", trailing: "English", onTap: () {}, enabled: false),
+                           const Divider(),
+                           _buildListItem(context, icon: LucideIcons.lock, title: "Privacy", onTap: () {}, enabled: false),
+                         ],
+                       ),
+                     ),
+
+                     const SizedBox(height: 24),
+                     
+                     SizedBox(
+                       width: double.infinity,
+                       child: Button.ghost(
+                          onPressed: () {
+                             FirebaseAuth.instance.signOut();
+                             context.go('/auth');
+                          },
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                               Icon(LucideIcons.logOut, color: theme.colorScheme.destructive, size: 18),
+                               const SizedBox(width: 8),
+                               Text("Sign out", style: material.TextStyle(color: theme.colorScheme.destructive)),
+                            ],
+                          ),
+                       ),
+                     ),
+                     
+                     const SizedBox(height: 24),
+                     Center(child: Text("Version 1.0.0").muted().small()),
+                   ],
                 ),
-                IconButton(
-                   onPressed: () => context.push('/profile-form'), 
-                   icon: Icon(Icons.edit, color: Theme.of(context).primaryColor),
-                )
-              ],
+              ),
             ),
-            
-            const SizedBox(height: 32),
-
-            // Menu Grid / List
-            _buildSectionHeader(context, "Favorites"),
-            _buildMenuItem(context, "Saved Places", Icons.place, onTap: () {}),
-            _buildMenuItem(context, "Trusted Contacts", Icons.security, onTap: () {}),
-
-            const SizedBox(height: 24),
-            _buildSectionHeader(context, "Settings"),
-            _buildMenuItem(context, "Notifications", Icons.notifications_none, onTap: () {}),
-            _buildMenuItem(context, "Privacy", Icons.lock_outline, onTap: () {}),
-            _buildMenuItem(context, "Payments", Icons.payment, onTap: () {}),
-            
-            const SizedBox(height: 24),
-            _buildMenuItem(
-              context, 
-              "Logout", 
-              Icons.logout, 
-              onTap: () {
-                 FirebaseAuth.instance.signOut();
-                 context.go('/auth');
-              },
-              isDestructive: true,
-            ),
-            
-            const SizedBox(height: 40),
-            Text(
-              "v1.0.0",
-              style: TextStyle(color: Colors.grey[600], fontSize: 12.sp),
-            )
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Text(
-          title, 
-          style: TextStyle(
-            fontSize: 16.sp, 
-            fontWeight: FontWeight.bold, 
-            color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87
-          )
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMenuItem(BuildContext context, String title, IconData icon, {required VoidCallback onTap, bool isDestructive = false}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.grey[900] : Colors.grey[100],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
-        onTap: onTap,
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: isDestructive ? Colors.red.withOpacity(0.1) : (isDark ? Colors.black : Colors.white),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            icon, 
-            size: 20, 
-            color: isDestructive ? Colors.red : (isDark ? Colors.white : Colors.black)
-          ),
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: isDestructive ? Colors.red : (isDark ? Colors.white : Colors.black),
-          ),
-        ),
-        trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
-      ),
-    );
+  Widget _buildListItem(BuildContext context, {
+    required IconData icon, 
+    required String title, 
+    String? trailing, 
+    required VoidCallback onTap,
+    bool enabled = true
+  }) {
+     final theme = Theme.of(context);
+     final opacity = enabled ? 1.0 : 0.5;
+     
+     return GestureDetector(
+       onTap: enabled ? onTap : null,
+       behavior: HitTestBehavior.opaque,
+       child: Padding(
+         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+         child: Opacity(
+           opacity: opacity,
+           child: Row(
+             children: [
+               Container(
+                 padding: const EdgeInsets.all(8),
+                 decoration: BoxDecoration(
+                   color: theme.colorScheme.primary.withOpacity(0.1),
+                   borderRadius: BorderRadius.circular(8),
+                 ),
+                 child: Icon(icon, size: 18, color: theme.colorScheme.primary),
+               ),
+               const SizedBox(width: 12),
+               Expanded(child: Text(title).medium().foreground()),
+               if (trailing != null) ...[
+                  Text(trailing).muted().small(),
+                  const SizedBox(width: 8),
+               ],
+               if (enabled)
+                Icon(LucideIcons.chevronRight, size: 16, color: theme.colorScheme.mutedForeground)
+               else 
+                const SizedBox(width: 16) // Placeholder for alignment or just empty
+             ],
+           ),
+         ),
+       ),
+     );
   }
 }

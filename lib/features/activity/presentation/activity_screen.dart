@@ -1,34 +1,59 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' as material;
+import 'package:lottie/lottie.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-class ActivityScreen extends StatelessWidget {
-  final VoidCallback? onBack;
-  const ActivityScreen({super.key, this.onBack});
+class ActivityScreen extends material.StatelessWidget {
+  const ActivityScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white : Colors.black;
-    final subtitleColor = isDark ? Colors.white70 : Colors.grey[600];
+  @override
+  material.Widget build(material.BuildContext context) {
+    // Resolve Theme conflict - Use Shadcn Theme
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    // Resolve Colors conflict
+    final textColor = theme.colorScheme.foreground;
+    final subtitleColor = theme.colorScheme.mutedForeground;
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text("Recent Activity"),
-        automaticallyImplyLeading: false,
-        leading: onBack != null ? IconButton(
-          icon: Icon(Icons.arrow_back, color: Theme.of(context).iconTheme.color),
-          onPressed: onBack,
-        ) : null,
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+    return material.Container(
+      color: theme.colorScheme.background,
+      child: material.SafeArea(
+        child: material.Column(
           children: [
-            const Icon(Icons.history, size: 64, color: Colors.grey),
-            const SizedBox(height: 16),
-            Text("No recent rides", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
-            const SizedBox(height: 8),
-            Text("Your completed trips will appear here.", style: TextStyle(color: subtitleColor)),
+             material.Padding(
+              padding: const material.EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: material.Row(
+                children: [
+                  material.IconButton(
+                    icon: material.Icon(LucideIcons.menu, color: theme.colorScheme.foreground),
+                    onPressed: () => material.Scaffold.of(context).openDrawer(),
+                  ),
+                  const material.SizedBox(width: 8),
+                  material.Text("Recent Activity", style: theme.typography.h4.copyWith(color: theme.colorScheme.foreground)),
+                ],
+              ),
+            ),
+            material.Expanded(
+              child: material.Center(
+                child: material.Column(
+                  mainAxisAlignment: material.MainAxisAlignment.center,
+                  children: [
+                    // Lottie with Icon fallback
+                    Lottie.asset(
+                       'assets/lottie/empty_activity.json',
+                       width: 200,
+                       height: 200,
+                       errorBuilder: (c, e, s) => const material.Icon(LucideIcons.history, size: 64, color: material.Colors.grey),
+                    ),
+                    const material.SizedBox(height: 16),
+                    material.Text("No recent rides", style: material.TextStyle(fontSize: 18, fontWeight: material.FontWeight.bold, color: textColor)),
+                    const material.SizedBox(height: 8),
+                    material.Text("Your completed trips will appear here.", style: material.TextStyle(color: subtitleColor)),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),

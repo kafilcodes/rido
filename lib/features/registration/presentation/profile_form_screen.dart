@@ -1,18 +1,18 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' as material;
+import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import 'package:sizer/sizer.dart';
-import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:logger/logger.dart';
+import 'package:intl/intl.dart';
 
 class ProfileFormScreen extends ConsumerStatefulWidget {
-  final String role; // 'rider' or 'driver'
+  final String role; 
 
   const ProfileFormScreen({super.key, required this.role});
 
@@ -21,11 +21,10 @@ class ProfileFormScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileFormScreenState extends ConsumerState<ProfileFormScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _pincodeController = TextEditingController();
-  final _cityController = TextEditingController();
-  // ... other controllers
+  final _formKey = material.GlobalKey<material.FormState>();
+  final _nameController = material.TextEditingController();
+  final _pincodeController = material.TextEditingController();
+  final _cityController = material.TextEditingController();
   
   File? _imageFile;
   DateTime? _dob;
@@ -38,56 +37,41 @@ class _ProfileFormScreenState extends ConsumerState<ProfileFormScreen> {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
     if (pickedFile != null) {
-      if (await pickedFile.length() > 3000000) { // 3MB
-         // Show error
-         return;
-      }
       setState(() => _imageFile = File(pickedFile.path));
     }
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    
     if (_imageFile == null) {
-       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Profile picture required")));
+       material.ScaffoldMessenger.of(context).showSnackBar(const material.SnackBar(content: Text("Profile picture required")));
        return;
     }
     if (_dob == null) {
-       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Date of Birth required")));
+       material.ScaffoldMessenger.of(context).showSnackBar(const material.SnackBar(content: Text("Date of Birth required")));
        return;
     }
     
-    // Age check
     final age = DateTime.now().year - _dob!.year;
     if (widget.role == 'driver' && age < 18) {
-       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Drivers must be 18+")));
+       material.ScaffoldMessenger.of(context).showSnackBar(const material.SnackBar(content: Text("Drivers must be 18+")));
        return;
     }
     if (widget.role == 'rider' && age < 16) {
-       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Riders must be 16+")));
+       material.ScaffoldMessenger.of(context).showSnackBar(const material.SnackBar(content: Text("Riders must be 16+")));
        return;
     }
 
-    // Pincode Check
     if (!allowedPincodes.contains(_pincodeController.text)) {
-      final snackBar = SnackBar(
-        elevation: 0,
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: Colors.transparent,
-        content: AwesomeSnackbarContent(
-          title: 'Service Unavailable',
-          message: 'Service unavailable in this area.',
-          contentType: ContentType.failure,
-        ),
-      );
-      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      material.ScaffoldMessenger.of(context).showSnackBar(const material.SnackBar(content: Text("Service Unavailable: Rido is not yet available in your area.")));
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final user = auth.FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception("No user logged in");
 
       // Upload Image
@@ -116,75 +100,101 @@ class _ProfileFormScreenState extends ConsumerState<ProfileFormScreen> {
     } catch (e) {
       _logger.e("Profile save failed: $e");
       setState(() => _isLoading = false);
-       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+      if(mounted) material.ScaffoldMessenger.of(context).showSnackBar(material.SnackBar(content: Text("Error: $e")));
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("Complete Profile (${widget.role.toUpperCase()})")),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
+  material.Widget build(material.BuildContext context) {
+    return material.Scaffold( // Material Scaffold
+      appBar: material.AppBar(title: Text("Complete Profile (${widget.role.toUpperCase()})")),
+      body: material.SingleChildScrollView(
+        padding: const material.EdgeInsets.all(24),
+        child: material.Form( // Material Form
           key: _formKey,
-          child: Column(
+          child: material.Column(
+            crossAxisAlignment: material.CrossAxisAlignment.stretch,
             children: [
-              GestureDetector(
-                onTap: _pickImage,
-                child: CircleAvatar(
-                  radius: 50,
-                  backgroundImage: _imageFile != null ? FileImage(_imageFile!) : null,
-                  child: _imageFile == null ? const Icon(Icons.camera_alt, size: 40) : null,
+              // Avatar
+              material.Center(
+                child: material.GestureDetector(
+                  onTap: _pickImage,
+                  child: material.CircleAvatar(
+                     radius: 50,
+                     backgroundColor: material.Colors.grey[200],
+                     backgroundImage: _imageFile != null ? material.FileImage(_imageFile!) : null,
+                     child: _imageFile == null ? const material.Icon(LucideIcons.camera, size: 32, color: material.Colors.grey) : null,
+                  ),
                 ),
               ),
-              const SizedBox(height: 20),
-              TextFormField(
+              const SizedBox(height: 32),
+              
+              // Name
+              const Text('Full Name').h4(),
+              const SizedBox(height: 8),
+              TextField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: "Full Name", border: OutlineInputBorder()),
-                validator: (v) => v!.isEmpty ? "Required" : null,
+                placeholder: const Text("Enter your name"),
               ),
-              const SizedBox(height: 20),
-              // DOB Picker
-              ListTile(
-                title: Text(_dob == null ? "Select Date of Birth" : "DOB: ${DateFormat('yyyy-MM-dd').format(_dob!)}"),
-                trailing: const Icon(Icons.calendar_today),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: const BorderSide(color: Colors.grey)),
-                onTap: () async {
-                  final d = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime(2000),
-                    firstDate: DateTime(1950),
-                    lastDate: DateTime.now(),
-                  );
-                  if (d != null) setState(() => _dob = d);
-                },
-              ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _cityController,
-                decoration: const InputDecoration(labelText: "City", border: OutlineInputBorder()),
-                validator: (v) => v!.isEmpty ? "Required" : null,
-              ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _pincodeController,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
-                decoration: const InputDecoration(labelText: "Pincode", border: OutlineInputBorder(), counterText: ""),
-                validator: (v) => v!.length != 6 ? "Invalid Pincode" : null,
-              ),
-              const SizedBox(height: 40),
+              
+              const SizedBox(height: 16),
+              
+              // DOB
+              const Text('Date of Birth').h4(),
+              const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _submit,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
+                child: Button.outline(
+                  onPressed: () async {
+                     final d = await material.showDatePicker(
+                      context: context,
+                      initialDate: DateTime(2000),
+                      firstDate: DateTime(1950),
+                      lastDate: DateTime.now(),
+                    );
+                    if (d != null) setState(() => _dob = d);
+                  },
+                  child: material.Row(
+                    mainAxisAlignment: material.MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(_dob == null ? "Select Date" : DateFormat('yyyy-MM-dd').format(_dob!)),
+                      const material.Icon(LucideIcons.calendar, size: 16),
+                    ],
                   ),
-                  child: _isLoading ? const CircularProgressIndicator() : const Text("Save & Continue"),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // City
+              const Text('City').h4(),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _cityController,
+                 placeholder: const Text("e.g. Dhamtari"),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Pincode
+              const Text('Pincode').h4(),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _pincodeController,
+                keyboardType: material.TextInputType.number,
+                maxLength: 6,
+                 placeholder: const Text("e.g. 493773"),
+              ),
+
+              const SizedBox(height: 40),
+
+              SizedBox(
+                width: double.infinity,
+                child: Button.primary(
+                  onPressed: _isLoading ? null : _submit,
+                  child: _isLoading 
+                    ? const material.SizedBox(width: 16, height: 16, child: material.CircularProgressIndicator(strokeWidth: 2, color: material.Colors.white)) 
+                    : const Text("Save & Continue"),
                 ),
               )
             ],

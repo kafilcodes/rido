@@ -1,9 +1,11 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' as material;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sizer/sizer.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:logger/logger.dart';
-import 'core/theme/app_theme.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'core/theme/ui_theme.dart';
+import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -22,7 +24,7 @@ final logger = Logger(
 );
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  material.WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
   
   try {
@@ -33,23 +35,29 @@ void main() async {
     logger.e("Firebase Initialization Failed: $e");
   }
 
-  runApp(const ProviderScope(child: MyApp()));
+  material.runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  material.Widget build(material.BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    final materialThemeMode = ref.watch(themeProvider);
+    
+    // Map Material ThemeMode to Shadcn ThemeMode
+    final shadcnThemeMode = materialThemeMode == material.ThemeMode.dark 
+        ? ThemeMode.dark 
+        : ThemeMode.light;
 
     return Sizer(
       builder: (context, orientation, deviceType) {
-        return MaterialApp.router(
+        return ShadcnApp.router(
           title: 'Rido',
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: ThemeMode.dark, // Default to Dark as requested
+          theme: UITheme.shadcnLight,
+          darkTheme: UITheme.shadcnDark,
+          themeMode: shadcnThemeMode, 
           routerConfig: router,
           debugShowCheckedModeBanner: false,
         );

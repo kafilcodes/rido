@@ -1,7 +1,9 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' as material;
+import 'package:flutter/widgets.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:sizer/sizer.dart';
 import 'package:geocoding/geocoding.dart';
 
@@ -55,7 +57,7 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
         });
       }
     } catch (e) {
-      setState(() => _isLoadingAddress = false);
+      if (mounted) setState(() => _isLoadingAddress = false);
     }
   }
 
@@ -71,7 +73,7 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
   }
 
   void _confirm() {
-    Navigator.pop(context, {
+    Navigator.of(context).pop({
       'latLng': _currentPosition,
       'address': _currentAddress,
       'images': _capturedImages.map((e) => e.path).toList(), // Return paths
@@ -80,17 +82,17 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Scaffold(
+    final theme = Theme.of(context);
+    
+    return material.Scaffold(
       body: Stack(
         children: [
           GoogleMap(
             initialCameraPosition: CameraPosition(target: widget.initialTarget, zoom: 18),
             onMapCreated: (c) {
               _mapController = c;
-              if (isDark) {
-                // Apply dark style if available
+              if (theme.brightness == Brightness.dark) {
+                // Apply dark style if available (optional enhancement)
               }
             },
             onCameraMove: _onCameraMove,
@@ -103,7 +105,7 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
           Center(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 35), // Adjust for pin tip
-              child: Icon(Icons.location_on, size: 45, color: Theme.of(context).primaryColor),
+              child: Icon(material.Icons.location_on, size: 45, color: theme.colorScheme.primary),
             ),
           ),
           
@@ -111,9 +113,15 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
           Positioned(
             top: 50,
             left: 16,
-            child: CircleAvatar(
-              backgroundColor: Theme.of(context).cardColor,
-              child: BackButton(color: isDark ? Colors.white : Colors.black),
+            child: Container(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.background, // Adaptive background
+                shape: BoxShape.circle,
+                boxShadow: [
+                   BoxShadow(blurRadius: 8, color: material.Colors.black12)
+                ]
+              ),
+              child: const material.BackButton(),
             ),
           ),
 
@@ -125,9 +133,9 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
             child: Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
+                color: theme.colorScheme.card, // Adaptive card color
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                boxShadow: [BoxShadow(blurRadius: 10, color: Colors.black12)],
+                boxShadow: const [BoxShadow(blurRadius: 10, color: material.Colors.black12)],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -135,17 +143,17 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
                 children: [
                    Text(
                      widget.isPickup ? "Confirm Pickup Location" : "Confirm Dropoff Location",
-                     style: TextStyle(fontSize: 12.sp, color: Colors.grey),
+                     style: theme.typography.small.copyWith(color: theme.colorScheme.mutedForeground),
                    ),
                    const SizedBox(height: 8),
                    Row(
                      children: [
-                       Icon(Icons.location_on, color: Theme.of(context).primaryColor),
+                       Icon(material.Icons.location_on, color: theme.colorScheme.primary),
                        const SizedBox(width: 10),
                        Expanded(
                          child: _isLoadingAddress 
-                           ? const LinearProgressIndicator() 
-                           : Text(_currentAddress, style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold)),
+                           ? const material.LinearProgressIndicator() 
+                           : Text(_currentAddress).medium().foreground(),
                        ),
                      ],
                    ),
@@ -155,13 +163,14 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
                    if (widget.isPickup) ...[
                      Row(
                        children: [
-                         ElevatedButton.icon(
+                         Button.outline(
                            onPressed: _capturedImages.length < 2 ? _captureImage : null, 
-                           icon: const Icon(Icons.camera_alt),
-                           label: const Text("Surround Photo"),
-                           style: ElevatedButton.styleFrom(
-                             backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
-                             foregroundColor: isDark ? Colors.white : Colors.black,
+                           child: Row(
+                             children: [
+                               const Icon(LucideIcons.camera, size: 16),
+                               const SizedBox(width: 8),
+                               const Text("Surround Photo"),
+                             ],
                            ),
                          ),
                          const SizedBox(width: 10),
@@ -179,21 +188,9 @@ class _ConfirmLocationScreenState extends State<ConfirmLocationScreen> {
 
                    SizedBox(
                      width: double.infinity,
-                     height: 50,
-                     child: Container(
-                       decoration: BoxDecoration(
-                         gradient: const LinearGradient(colors: [Color(0xFF6A11CB), Color(0xFF2575FC)]),
-                         borderRadius: BorderRadius.circular(12)
-                       ),
-                       child: ElevatedButton(
-                         onPressed: _isLoadingAddress ? null : _confirm,
-                         style: ElevatedButton.styleFrom(
-                           backgroundColor: Colors.transparent,
-                           foregroundColor: Colors.white,
-                           shadowColor: Colors.transparent,
-                         ),
-                         child: const Text("Confirm Location", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                       ),
+                     child: Button.primary(
+                       onPressed: _isLoadingAddress ? null : _confirm,
+                       child: const Text("Confirm Location"),
                      ),
                    )
                 ],

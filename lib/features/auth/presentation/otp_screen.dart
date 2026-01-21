@@ -1,5 +1,7 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' as material;
+import 'package:rido/core/theme/ui_theme.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pinput/pinput.dart';
@@ -24,7 +26,7 @@ class OtpScreen extends ConsumerStatefulWidget {
 }
 
 class _OtpScreenState extends ConsumerState<OtpScreen> {
-  final TextEditingController _pinController = TextEditingController();
+  final material.TextEditingController _pinController = material.TextEditingController();
   final Logger _logger = Logger();
   bool _isLoading = false;
   int _secondsRemaining = 30;
@@ -91,7 +93,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
         _hasError = true;
       });
       if (mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Verification Failed: $e")));
+         material.ScaffoldMessenger.of(context).showSnackBar(material.SnackBar(content: material.Text("Verification Failed: $e")));
       }
     }
   }
@@ -103,8 +105,15 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
     
     if (mounted) {
+      // Check if document exists AND has valid data (e.g. name is not empty)
       if (doc.exists) {
-        context.go('/home');
+        final data = doc.data();
+        if (data != null && data.containsKey('name') && (data['name'] as String).isNotEmpty) {
+           context.go('/home');
+        } else {
+           // Document exists but profile incomplete? Go to role/profile
+           context.go('/role-selection');
+        }
       } else {
         context.go('/role-selection');
       }
@@ -112,21 +121,36 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    // ... defaultPinTheme definition omitted as it is unused or can be defined inline ...
+  material.Widget build(material.BuildContext context) {
+    // Theme-aware Pinput colors
+    final theme = material.Theme.of(context);
+    final borderColor = theme.colorScheme.outline;
+    final focusedColor = theme.colorScheme.primary;
+    final fillColor = theme.colorScheme.surface;
+    
+    final defaultPinTheme = PinTheme(
+      width: 56,
+      height: 56,
+      textStyle: material.TextStyle(fontSize: 20, color: theme.colorScheme.onSurface, fontWeight: material.FontWeight.w600),
+      decoration: material.BoxDecoration(
+        color: fillColor,
+        borderRadius: material.BorderRadius.circular(8),
+        border: material.Border.all(color: _hasError ? theme.colorScheme.error : borderColor),
+      ),
+    );
 
-    return Scaffold(
-      appBar: AppBar(title: const Text("Verify Phone")),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
+    return material.Scaffold(
+      appBar: material.AppBar(title: const Text("Verify Phone")),
+      body: material.SingleChildScrollView(
+        padding: const material.EdgeInsets.all(24.0),
+        child: material.Column(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            material.Row(
+              mainAxisAlignment: material.MainAxisAlignment.center,
               children: [
-                Icon(Icons.message, size: 16.sp, color: Colors.grey),
+                material.Icon(LucideIcons.messageSquare, size: 16.sp, color: theme.colorScheme.onSurface),
                 const SizedBox(width: 8),
-                Text("Code sent to ${widget.phone}"),
+                Text("Code sent to ${widget.phone}").muted(),
               ],
             ),
             const SizedBox(height: 32),
@@ -136,77 +160,66 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
               showCursor: true,
               onCompleted: (pin) => _verifyOtp(pin),
               length: 6,
-              defaultPinTheme: PinTheme(
-                width: 56, 
-                height: 56, 
-                textStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black), 
-                decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[900] : Colors.grey[200], 
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: _hasError ? Colors.red : Theme.of(context).dividerColor), 
-                ),
-              ),
-              focusedPinTheme: PinTheme(
-                width: 56, 
-                height: 56, 
-                 textStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black), 
-                decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[900] : Colors.grey[200], 
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Theme.of(context).primaryColor, width: 2), 
+              defaultPinTheme: defaultPinTheme,
+              focusedPinTheme: defaultPinTheme.copyWith(
+                decoration: defaultPinTheme.decoration!.copyWith(
+                  border: material.Border.all(color: focusedColor, width: 2),
                 ),
               ),
             ),
              const SizedBox(height: 32),
-             Container(
-                width: double.infinity,
-                height: 6.h,
-                decoration: BoxDecoration(
-                  gradient: _isVerified 
-                      ? const LinearGradient(colors: [Colors.green, Colors.lightGreen])
-                      : const LinearGradient(
-                          colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: ElevatedButton(
-                  onPressed: (_isLoading || _isVerified) ? null : () => _verifyOtp(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+             
+             SizedBox(
+               width: double.infinity,
+               height: 6.h,
+               child: _isVerified 
+               ? Button.secondary(
+                  onPressed: null,
+                  child: const material.Icon(LucideIcons.check, size: 24),
+                 )
+               : material.GestureDetector(
+                  onTap: (!_isLoading) ? () => _verifyOtp() : null,
+                  child: material.Container(
+                    width: double.infinity,
+                    padding: const material.EdgeInsets.symmetric(vertical: 16),
+                    alignment: material.Alignment.center,
+                    decoration: material.BoxDecoration(
+                      borderRadius: material.BorderRadius.circular(8),
+                      color: material.Theme.of(context).colorScheme.primary,
+                    ),
+                    child: _isLoading
+                        ? const material.SizedBox(width: 24, height: 24, child: material.CircularProgressIndicator(strokeWidth: 2, color: material.Colors.white))
+                        : const material.Row(
+                            mainAxisAlignment: material.MainAxisAlignment.center,
+                            children: [
+                               Text("Verify & Continue", style: material.TextStyle(fontWeight: material.FontWeight.bold, fontSize: 16, color: material.Colors.white)),
+                               material.SizedBox(width: 8),
+                               Icon(LucideIcons.arrowRight, size: 18, color: material.Colors.white),
+                            ],
+                          ),
                   ),
-                  child: _isLoading
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : _isVerified
-                          ? const Icon(Icons.check, color: Colors.white, size: 30)
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.check_circle_outline, color: Colors.white),
-                                const SizedBox(width: 8),
-                                Text("Verify", style: TextStyle(fontSize: 14.sp, color: Colors.white, fontWeight: FontWeight.bold)),
-                              ],
-                            ),
                 ),
              ),
+
              const SizedBox(height: 16),
              if (_secondsRemaining > 0)
-                TextButton.icon(
+                Button.ghost(
                   onPressed: null, 
-                  icon: const Icon(Icons.timer_outlined, size: 16),
-                  label: Text("Resend in $_secondsRemaining s"),
+                  child: material.Row(
+                    mainAxisSize: material.MainAxisSize.min,
+                    children: [
+                      const material.Icon(LucideIcons.timer, size: 16),
+                      const SizedBox(width: 8),
+                      Text("Resend in $_secondsRemaining s"),
+                    ],
+                  ),
                 )
              else
-                TextButton.icon(
+                Button.ghost(
                   onPressed: () {
-                    // Implement resend logic (call verifyPhoneNumber again)
                     startTimer();
                   }, 
-                  icon: const Icon(Icons.refresh),
-                  label: const Text("Resend OTP"),
+                  child: const Text("Resend OTP"),
                 )
           ],
         ),

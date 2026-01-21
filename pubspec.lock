@@ -33,6 +33,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.13.4"
+  animation_list:
+    dependency: "direct main"
+    description:
+      name: animation_list
+      sha256: "5d193f53a6616dc6496eb7eff297da84a6f18c1c042412bbfe05dfc8be7be926"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.0"
   animations:
     dependency: "direct main"
     description:
@@ -837,16 +845,8 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  forui:
-    dependency: "direct main"
-    description:
-      name: forui
-      sha256: "94c5dccb78f784ffbb6facf8032dd31e52ff66ac23c68e28cf67b272abb08464"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.17.0"
   forui_assets:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: forui_assets
       sha256: "263c1e8d6c3eed1d1585fa7001f4f430678683336f5417253d5fff68c533f373"
@@ -1061,6 +1061,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.5.14+3"
+  google_places_autocomplete:
+    dependency: "direct main"
+    description:
+      name: google_places_autocomplete
+      sha256: "403eebe19a0d9e5d03e268bd348590e0dd6ab0cb4933a967440d0d4b3f3ec4df"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.1"
   graphs:
     dependency: transitive
     description:
@@ -1349,6 +1357,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.3.2"
+  lucide_icons:
+    dependency: "direct main"
+    description:
+      name: lucide_icons
+      sha256: ad24d0fd65707e48add30bebada7d90bff2a1bba0a72d6e9b19d44246b0e83c4
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.257.0"
   lucide_icons_flutter:
     dependency: transitive
     description:
@@ -1813,6 +1829,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.0"
+  shimmer:
+    dependency: "direct main"
+    description:
+      name: shimmer
+      sha256: "5f88c883a22e9f9f299e5ba0e4f7e6054857224976a5d9f839d4ebdc94a14ac9"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.0"
   sizer:
     dependency: "direct main"
     description:
@@ -1906,14 +1930,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.1"
-  sugar:
-    dependency: transitive
-    description:
-      name: sugar
-      sha256: a0a97f1d3552a3ef4cbec7c6e62c7b52c151cd5c11e984e8311700a918f73dc5
-      url: "https://pub.dev"
-    source: hosted
-    version: "4.0.0"
   talker:
     dependency: "direct main"
     description:

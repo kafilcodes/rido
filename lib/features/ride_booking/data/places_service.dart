@@ -3,54 +3,122 @@ import 'package:http/http.dart' as http;
 
 class PlacesService {
   final String _apiKey = 'AIzaSyCirMlYvLCV-XyNco9C0gakqUiDfrnq2a8'; 
-  final String _baseUrl = 'https://maps.googleapis.com/maps/api/place/autocomplete/json';
+  
+  // NEW API: v1
+  final String _baseUrl = 'https://places.googleapis.com/v1/places:autocomplete';
+  final String _detailsUrl = 'https://places.googleapis.com/v1/places';
 
   Future<List<Map<String, dynamic>>> searchPlaces(String query, String sessionToken) async {
     if (query.isEmpty) return [];
 
-    // Dhamtari/Chhattisgarh restriction approach:
-    // strictbounds + location + radius is best.
-    // Dhamtari Lat/Lng: 20.7066, 81.5492
-    // Radius: ~100km to cover surrounding areas? Or just bias.
-    // User said "restrict... show only...". strictbounds is needed.
-    // Let's set location to Dhamtari and radius to 50km.
+    // Dhamtari Restriction (New API uses JSON body for configuration)
+    // Center: 20.7066, 81.5492
+    // Radius: 50000 meters
     
-    final uri = Uri.parse(_baseUrl).replace(queryParameters: {
-      'input': query,
-      'key': _apiKey,
-      'sessiontoken': sessionToken,
-      'components': 'country:in', // Restrict to India
-      'location': '20.7066,81.5492', // Dhamtari
-      'radius': '50000', // 50km
-      'strictbounds': 'true', // Restrict results to this region
-    });
+    final requestBody = {
+      "input": query,
+      "sessionToken": sessionToken,
+      "locationRestriction": {
+        "circle": {
+          "center": {
+            "latitude": 20.7066,
+            "longitude": 81.5492
+          },
+          "radius": 50000.0
+        }
+      },
+      // Optional: Bias results to India if needed, but restriction handles area well.
+      // "includedRegionCodes": ["IN"], 
+    };
 
-    final response = await http.get(uri);
+    print("DEBUG: Places Search (New API) Request: $_baseUrl");
+    
+    try {
+      final response = await http.post(
+        Uri.parse(_baseUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': _apiKey,
+        },
+        body: json.encode(requestBody),
+      );
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      if (data['status'] == 'OK') {
-        return List<Map<String, dynamic>>.from(data['predictions']);
+      print("DEBUG: Places Search Response Code: ${response.statusCode}");
+      // print("DEBUG: Places Search Response Body: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final suggestions = data['suggestions'] as List<dynamic>?;
+        
+        if (suggestions != null) {
+          // Map New API response to the structure expected by the UI (Legacy format)
+          return suggestions.map((s) {
+            final prediction = s['placePrediction'];
+            final structured = prediction['structuredFormat'];
+            
+            return {
+              'description': prediction['text']['text'], // Full text
+              'place_id': prediction['placeId'],
+              'structured_formatting': {
+                'main_text': structured['mainText']['text'],
+                'secondary_text': structured['secondaryText']?['text'] ?? "",
+              }
+            };
+          }).toList().cast<Map<String, dynamic>>();
+        }
+      } else {
+        print("DEBUG: Places API Error: ${response.body}");
       }
+    } catch (e) {
+      print("DEBUG: Places API Exception: $e");
     }
     return [];
   }
   
-  // Also need Place Details to get Lat/Lng from Place ID
   Future<Map<String, dynamic>?> getPlaceDetails(String placeId, String sessionToken) async {
-    final uri = Uri.parse('https://maps.googleapis.com/maps/api/place/details/json').replace(queryParameters: {
-      'place_id': placeId,
-      'key': _apiKey,
-      'sessiontoken': sessionToken,
-      'fields': 'name,geometry,formatted_address', // minimize cost
-    });
+    // New API Details: GET /v1/places/{placeId}
+    // Requires FieldMask header
+    
+    final uri = Uri.parse('$_detailsUrl/$placeId');
+    
+    print("DEBUG: Place Details URI: $uri");
+    
+    try {
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': _apiKey,
+          'X-Goog-Session-Token': sessionToken,
+          // Specify fields we need: location, formattedAddress
+          'X-Goog-FieldMask': 'location,formattedAddress,displayName,addressComponents', 
+        },
+      );
 
-    final response = await http.get(uri);
-    if (response.statusCode == 200) {
-       final data = json.decode(response.body);
-       if (data['status'] == 'OK') {
-         return data['result'];
-       }
+      print("DEBUG: Place Details Response: ${response.statusCode}");
+      
+      if (response.statusCode == 200) {
+         final data = json.decode(response.body);
+         
+         // Map to format expected by UI (which expects 'geometry' -> 'location')
+         // New API returns top-level 'location' object: { "latitude": ..., "longitude": ... }
+         
+         return {
+           'geometry': {
+             'location': {
+               'lat': data['location']['latitude'],
+               'lng': data['location']['longitude'],
+             }
+           },
+           'formatted_address': data['formattedAddress'],
+           'name': data['displayName']?['text'] ?? "",
+           'address_components': data['addressComponents'], // Pass through for validation
+         };
+      } else {
+         print("DEBUG: Place Details Error: ${response.body}");
+      }
+    } catch (e) {
+      print("DEBUG: Place Details Exception: $e");
     }
     return null;
   }

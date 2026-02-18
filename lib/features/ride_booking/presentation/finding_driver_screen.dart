@@ -19,7 +19,7 @@ class FindingDriverScreen extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Lottie.asset('assets/lottie/ride.json', height: 15.h), // Reusing existing lottie
+          Lottie.asset('assets/lottie/robot.json', height: 20.h), // Reusing existing lottie
           SizedBox(height: 2.h),
           Text("Connecting to nearby drivers...").h3().foreground(),
           SizedBox(height: 2.h),

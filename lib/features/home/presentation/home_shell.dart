@@ -15,6 +15,7 @@ import '../../ride_booking/presentation/finding_driver_screen.dart';
 import '../../notifications/presentation/notifications_screen.dart';
 import 'widgets/home_sidebar.dart';
 import 'widgets/home_search_card.dart';
+import 'widgets/home_tab.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -94,6 +95,18 @@ class _HomeShellState extends State<HomeShell> {
     }
   }
 
+  // State for Vehicle Selection
+  String? _preSelectedVehicle;
+
+  // ... (existing methods)
+
+  void _onVehicleSelected(String vehicle) {
+    setState(() {
+      _preSelectedVehicle = vehicle;
+    });
+    // Just update state, let user tap "Where to?" to proceed.
+  }
+  
   void _onSearchTap() async {
     final result = await context.push('/destination-search');
     if (result != null && result is Map) {
@@ -113,12 +126,17 @@ class _HomeShellState extends State<HomeShell> {
       backgroundColor: material.Colors.transparent,
       builder: (context) => RideEstimationSheet(
         destination: _destination!, 
+        preSelectedVehicle: _preSelectedVehicle, // Pass the vehicle
         onConfirm: () {
           Navigator.pop(context); 
           _showFindingDriverSheet();
         },
       ),
     ).whenComplete(() {
+      setState(() {
+         // Reset pre-selection after flow
+         // _preSelectedVehicle = null; 
+      });
       if (!_isFindingDriverVisible) {
          setState(() {
            _isBooking = false;
@@ -145,29 +163,18 @@ class _HomeShellState extends State<HomeShell> {
     });
   }
 
-
-
-  @override
   void _openSidebar() {
     _scaffoldKey.currentState?.openDrawer();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Determine greeting
-    final hour = DateTime.now().hour;
-    String greeting = "Good Morning";
-    if (hour >= 12 && hour < 17) greeting = "Good Afternoon";
-    if (hour >= 17) greeting = "Good Evening";
-    
-    final fullName = _userData?['name'] as String? ?? _currentUser?.displayName ?? "User";
-    final firstName = fullName.split(' ').first;
-    final greetingText = "$greeting, $firstName";
-
+    final theme = Theme.of(context);
     return material.Scaffold(
       key: _scaffoldKey,
+      backgroundColor: theme.colorScheme.background, // Explicitly set background
       drawer: material.Drawer(
-        width: 75.w, // Sidebar width
+        width: 75.w,
         child: HomeSidebar(
           currentUser: _currentUser,
           userData: _userData,
@@ -177,80 +184,39 @@ class _HomeShellState extends State<HomeShell> {
         ),
       ),
       body: Stack(
-        children: [
-           IndexedStack(
-            index: _currentIndex,
             children: [
-              _buildMapTab(greetingText),
-              const ActivityScreen(), 
-              const AccountScreen(),
-              NotificationScreen(), // New Screen
+              IndexedStack(
+                index: _currentIndex,
+                children: [
+                  // HOME TAB (No Map)
+                  HomeTab(
+                    onMenuTap: _openSidebar,
+                    onNotificationTap: () => setState(() => _currentIndex = 3), // Navigate to Notifs
+                    onSearchTap: _onSearchTap,
+                    onVehicleSelected: _onVehicleSelected,
+                  ),
+                  const ActivityScreen(), 
+                  const AccountScreen(),
+                  NotificationScreen(),
+                ],
+              ),
+              
+              // Blur Overlay when booking/sheet is active
+              if (_isBooking)
+                Positioned.fill(
+                  child: ClipRect(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                      child: Container(
+                        color: material.Colors.black.withOpacity(0.1),
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
-          
-          if (_currentIndex == 0 && !_isBooking) 
-          Positioned(
-            top: 6.h,
-            left: 5.w,
-            child: GestureDetector(
-               onTap: _openSidebar,
-               child: Container(
-                 width: 48,
-                 height: 48,
-                 decoration: BoxDecoration(
-                   color: Theme.of(context).colorScheme.background,
-                   shape: BoxShape.circle,
-                   boxShadow: const [BoxShadow(color: material.Colors.black12, blurRadius: 8)],
-                 ),
-                 child: const Icon(LucideIcons.menu, size: 24),
-               ),
-            ),
-          ),
-        ],
-      ),
     );
   }
-
-  Widget _buildMapTab(String greeting) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    // Map Style String ... (omitted for brevity, keep existing)
-    const String darkMapStyle = '''[{"elementType":"geometry","stylers":[{"color":"#242f3e"}]},{"elementType":"labels.text.stroke","stylers":[{"color":"#242f3e"}]},{"elementType":"labels.text.fill","stylers":[{"color":"#746855"}]},{"featureType":"administrative.locality","elementType":"labels.text.fill","stylers":[{"color":"#d59563"}]},{"featureType":"poi","elementType":"labels.text.fill","stylers":[{"color":"#d59563"}]},{"featureType":"poi.park","elementType":"geometry","stylers":[{"color":"#263c3f"}]},{"featureType":"poi.park","elementType":"labels.text.fill","stylers":[{"color":"#6b9a76"}]},{"featureType":"road","elementType":"geometry","stylers":[{"color":"#38414e"}]},{"featureType":"road","elementType":"geometry.stroke","stylers":[{"color":"#212a37"}]},{"featureType":"road","elementType":"labels.text.fill","stylers":[{"color":"#9ca5b3"}]},{"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#746855"}]},{"featureType":"road.highway","elementType":"geometry.stroke","stylers":[{"color":"#1f2835"}]},{"featureType":"road.highway","elementType":"labels.text.fill","stylers":[{"color":"#f3d19c"}]},{"featureType":"transit","elementType":"geometry","stylers":[{"color":"#2f3948"}]},{"featureType":"transit.station","elementType":"labels.text.fill","stylers":[{"color":"#d59563"}]},{"featureType":"water","elementType":"geometry","stylers":[{"color":"#17263c"}]},{"featureType":"water","elementType":"labels.text.fill","stylers":[{"color":"#515c6d"}]},{"featureType":"water","elementType":"labels.text.stroke","stylers":[{"color":"#17263c"}]}]''';
-
-    return Stack(
-      children: [
-        GoogleMap(
-          initialCameraPosition: CameraPosition(target: _initialPosition, zoom: 14),
-          onMapCreated: (controller) {
-            _mapController = controller;
-            if (isDark) {
-               controller.setMapStyle(darkMapStyle);
-            }
-          },
-          myLocationEnabled: true,
-          myLocationButtonEnabled: false, 
-          zoomControlsEnabled: false,
-          compassEnabled: false,
-        ),
-        
-        if (!_isBooking) ...[
-          // Recenter Button
-          Positioned(
-            bottom: 35.h, 
-            right: 5.w,
-            child: material.FloatingActionButton(
-              backgroundColor: Theme.of(context).colorScheme.background,
-              onPressed: _determinePosition,
-              child: const Icon(LucideIcons.locate, color: material.Colors.red, size: 24),
-            ),
-          ),
-          
-          // New Search Card
-          HomeSearchCard(
-             greeting: greeting,
-             onTap: _onSearchTap,
-          ),
-        ]
-      ],
-    );
-  }
+  
+  // Deleted _buildMapTab as it is no longer used.
 }

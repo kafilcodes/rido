@@ -60,6 +60,12 @@ class MyApp extends ConsumerWidget {
           themeMode: shadcnThemeMode, 
           routerConfig: router,
           debugShowCheckedModeBanner: false,
+          builder: (context, child) {
+            return material.DefaultTextStyle(
+              style: material.TextStyle(fontFamily: 'UberMove'),
+              child: child!,
+            );
+          },
         );
       },
     );

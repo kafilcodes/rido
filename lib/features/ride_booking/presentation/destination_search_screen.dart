@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart' as material;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:lottie/lottie.dart';
 // import 'package:go_router/go_router.dart'; // Unused
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
@@ -294,31 +295,43 @@ class _DestinationSearchScreenState extends material.State<DestinationSearchScre
             const material.LinearProgressIndicator(),
             
           material.Expanded(
-            child: material.ListView.separated(
-              itemCount: _predictions.length,
-              separatorBuilder: (_, __) => const material.Divider(height: 1),
-              itemBuilder: (context, index) {
-                final item = _predictions[index];
-                final mainText = item['structured_formatting']?['main_text'] ?? item['description'] ?? "";
-                final secondaryText = item['structured_formatting']?['secondary_text'] ?? "";
-                
-                return material.ListTile(
-                  leading: const material.CircleAvatar(
-                    backgroundColor: material.Colors.grey, 
-                    child: material.Icon(material.Icons.place, color: material.Colors.white)
-                  ),
-                  title: material.Text(
-                    mainText,
-                    style: material.TextStyle(color: textColor, fontWeight: material.FontWeight.bold)
-                  ),
-                  subtitle: material.Text(
-                    secondaryText,
-                    style: material.TextStyle(color: mutedColor)
-                  ),
-                  onTap: () => _onPredictionSelected(item),
-                );
-              },
-            ),
+            child: _predictions.isEmpty && !_isLoading 
+              ? material.Center(
+             child: Padding(
+               padding: const EdgeInsets.only(bottom: 10, top: 10),
+               child: material.Image.asset(
+                 'assets/lottie/lovefordhamatari.gif',
+                 height: 500,
+                 width: 500,
+                 gaplessPlayback: true,
+               ),
+             ),
+          )
+              : material.ListView.separated(
+                  itemCount: _predictions.length,
+                  separatorBuilder: (_, __) => const material.Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final item = _predictions[index];
+                    final mainText = item['structured_formatting']?['main_text'] ?? item['description'] ?? "";
+                    final secondaryText = item['structured_formatting']?['secondary_text'] ?? "";
+                    
+                    return material.ListTile(
+                      leading: const material.CircleAvatar(
+                        backgroundColor: material.Colors.grey, 
+                        child: material.Icon(material.Icons.place, color: material.Colors.white)
+                      ),
+                      title: material.Text(
+                        mainText,
+                        style: material.TextStyle(color: textColor, fontWeight: material.FontWeight.bold)
+                      ),
+                      subtitle: material.Text(
+                        secondaryText,
+                        style: material.TextStyle(color: mutedColor)
+                      ),
+                      onTap: () => _onPredictionSelected(item),
+                    );
+                  },
+                ),
           ),
         ],
       ),
